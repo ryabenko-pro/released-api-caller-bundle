@@ -3,13 +3,15 @@
 namespace Released\ApiCallerBundle\Tests\Service;
 
 use JMS\Serializer\SerializerInterface;
+use PHPUnit\Framework\TestCase;
+use Released\ApiCallerBundle\Exception\ApiCallerException;
 use Released\ApiCallerBundle\Service\ApiCaller;
 use Released\ApiCallerBundle\Service\Util\ApiCallerListenerInterface;
 use Released\ApiCallerBundle\Transport\StubTransport;
 use Released\ApiCallerBundle\Transport\TransportInterface;
 use Released\ApiCallerBundle\Transport\TransportResponse;
 
-class ApiCallerTest extends \PHPUnit_Framework_TestCase
+class ApiCallerTest extends TestCase
 {
 
     /**
@@ -18,6 +20,9 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
      */
     public function testShouldThrowApiNotExists()
     {
+        $this->expectException(ApiCallerException::class);
+        $this->expectExceptionMessage("Api 'test' does not exists");
+
         // GIVEN
         $domain = "http://domain.com/";
         $apis = [];
@@ -32,6 +37,9 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
      */
     public function testShouldThrowNotEnoughParameters()
     {
+        $this->expectException(ApiCallerException::class);
+        $this->expectExceptionMessage("Not enough parameters: param, param1");
+
         // GIVEN
         $domain = "http://domain.com/";
         $apis = [];
@@ -47,6 +55,9 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
      */
     public function testShouldThrowClassDoesNotMatch()
     {
+        $this->expectException(ApiCallerException::class);
+        $this->expectExceptionMessage("Param 'some' should be instance of 'Released\ApiCallerBundle\Tests\Service\ApiCallerTest'");
+
         // GIVEN
         $domain = "http://domain.com/";
         $apis = [];
@@ -99,6 +110,39 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($transportResponse, $response);
     }
 
+    public function testShouldCastRequestObject()
+    {
+        // GIVEN
+        $domain = "http://domain.com/";
+        $apis = [];
+        $apis['test'] = ['name' => 'Test', 'path' => '/path/{param}', 'method' => 'POST'];
+
+        $transport = $this->getTransportMock();
+
+        /** @var StubTransport|\PHPUnit_Framework_MockObject_MockObject $transport */
+        $transportResponse = new TransportResponse("some content");
+        $transport->expects($this->once())->method('request')
+            ->with(
+                $domain . "path/value",
+                StubTransport::METHOD_POST,
+                ['a' => 1, 'b' => 2],
+                null,
+                null,
+            )
+            ->willReturn($transportResponse);
+
+
+        $caller = new ApiCaller($transport, new StubSerializer(), $domain, $apis);
+        $response = $caller->makeRequest('test', new class {
+            // Must be getters because of normilizer
+            public function getParam(): string { return 'value'; }
+            public function getA() { return 1; }
+            public function getB() { return 2; }
+        }, null);
+
+        $this->assertEquals($transportResponse, $response);
+    }
+
     public function testShouldCastResponse()
     {
         // GIVEN
@@ -115,7 +159,7 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
 
         /** @var SerializerInterface|\PHPUnit_Framework_MockObject_MockObject $serializer */
         $serializer = $this->getMockBuilder(SerializerInterface::class)
-            ->setMethods(['deserialize', 'serialize'])->getMock();
+            ->getMock();
 
         $caller = new ApiCaller($transport, $serializer, "http://domain.com/", $apis);
 
@@ -171,7 +215,7 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
     private function getTransportMock()
     {
         $transport = $this->getMockBuilder(StubTransport::class)
-            ->setMethods(['request'])->getMock();
+            ->getMock();
 
         return $transport;
     }
@@ -194,7 +238,7 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
             ->willReturn($transportResponse);
 
         $callback = $this->getMockBuilder(ApiCallerListenerInterface::class)
-            ->setMethods(['onRequest'])->getMock();
+            ->getMock();
 
         $callback->expects($this->once())->method('onRequest')
             ->with('http://domain.com/path/value', ['a' => 'b'], 'some content', 200, StubTransport::METHOD_POST);
@@ -214,6 +258,9 @@ class ApiCallerTest extends \PHPUnit_Framework_TestCase
      */
     public function testShouldThrowNotSuccessful()
     {
+        $this->expectException(ApiResponseException::class);
+        $this->expectExceptionMessage("Response status is 500");
+
         // GIVEN
         $domain = "http://domain.com/";
         $apis = [];

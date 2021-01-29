@@ -53,6 +53,15 @@ class ApiCaller implements ApiCallerInterface
      */
     public function makeRequest($api, $values = [], ApiCallerListenerInterface $listener = null, $headers = null, $domain = null)
     {
+        if (is_object($values)) {
+            $normalizer = new GetSetMethodNormalizer();
+
+            $serializer = new Serializer(array($normalizer));
+            $normalizer->setSerializer($serializer);
+
+            $values = $normalizer->normalize($values);
+        }
+
         $config = $this->checkApi($api, $values);
 
         $values = $this->cleanValues($values);

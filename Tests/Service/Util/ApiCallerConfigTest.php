@@ -3,9 +3,10 @@
 namespace Released\ApiCallerBundle\Tests\Unit\Service\Util;
 
 
+use PHPUnit\Framework\TestCase;
 use Released\ApiCallerBundle\Service\Util\ApiCallerConfig;
 
-class ApiCallerConfigTest extends \PHPUnit_Framework_TestCase
+class ApiCallerConfigTest extends TestCase
 {
     public function testShouldParseEmptyPath()
     {
