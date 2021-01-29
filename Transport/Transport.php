@@ -5,6 +5,7 @@ namespace Released\ApiCallerBundle\Transport;
 use GuzzleHttp\Client;
 use GuzzleHttp\Post\PostFile;
 use GuzzleHttp\Psr7\Stream;
+use GuzzleHttp\RequestOptions;
 
 class Transport implements TransportInterface
 {
@@ -23,6 +24,7 @@ class Transport implements TransportInterface
     public function request($url, $method = self::METHOD_GET, $data = null, $headers = null, $cookies = null, $files = null)
     {
         switch ($method) {
+            case self::METHOD_PUT:
             case self::METHOD_POST:
 
                 // TODO: use another HTTP client
@@ -65,11 +67,22 @@ class Transport implements TransportInterface
                     ];
                 }
 
-                $response = $this->client->post($url, [
-                    'multipart' => $multipart,
-                    'headers' => $headers,
-                    'exceptions' => false,
-                ]);
+                if (self::METHOD_POST === $method) {
+                    $response = $this->client->post($url, [
+                        RequestOptions::JSON => $data,
+                        'headers' => $headers,
+                        'exceptions' => false,
+                    ]);
+                }
+
+                if (self::METHOD_PUT === $method) {
+                    $response = $this->client->put($url, [
+                        RequestOptions::JSON => $data,
+                        'headers' => $headers,
+                        'exceptions' => false,
+                    ]);
+                }
+
                 break;
             default:
                 $response = $this->client->get($url, [

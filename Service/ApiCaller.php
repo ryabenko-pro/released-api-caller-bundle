@@ -13,6 +13,7 @@ use Released\ApiCallerBundle\Service\Util\ApiCallerListenerInterface;
 use Released\ApiCallerBundle\Transport\TransportInterface;
 use Released\ApiCallerBundle\Transport\TransportResponse;
 use Symfony\Component\Serializer\Normalizer\GetSetMethodNormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 
 class ApiCaller implements ApiCallerInterface
@@ -54,7 +55,7 @@ class ApiCaller implements ApiCallerInterface
     public function makeRequest($api, $values = [], ApiCallerListenerInterface $listener = null, $headers = null, $domain = null)
     {
         if (is_object($values)) {
-            $normalizer = new GetSetMethodNormalizer();
+            $normalizer = new ObjectNormalizer();
 
             $serializer = new Serializer(array($normalizer));
             $normalizer->setSerializer($serializer);
