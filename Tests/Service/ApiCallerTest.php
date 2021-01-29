@@ -5,6 +5,7 @@ namespace Released\ApiCallerBundle\Tests\Service;
 use JMS\Serializer\SerializerInterface;
 use PHPUnit\Framework\TestCase;
 use Released\ApiCallerBundle\Exception\ApiCallerException;
+use Released\ApiCallerBundle\Exception\ApiResponseException;
 use Released\ApiCallerBundle\Service\ApiCaller;
 use Released\ApiCallerBundle\Service\Util\ApiCallerListenerInterface;
 use Released\ApiCallerBundle\Transport\StubTransport;
@@ -14,10 +15,6 @@ use Released\ApiCallerBundle\Transport\TransportResponse;
 class ApiCallerTest extends TestCase
 {
 
-    /**
-     * @expectedException \Released\ApiCallerBundle\Exception\ApiCallerException
-     * @expectedExceptionMessage Api 'test' does not exists
-     */
     public function testShouldThrowApiNotExists()
     {
         $this->expectException(ApiCallerException::class);
@@ -27,14 +24,10 @@ class ApiCallerTest extends TestCase
         $domain = "http://domain.com/";
         $apis = [];
 
-        $caller = new ApiCaller(new StubTransport(), new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller(new StubTransport(), $this->createStub(SerializerInterface::class), $domain, $apis);
         $caller->makeRequest('test', null);
     }
 
-    /**
-     * @expectedException \Released\ApiCallerBundle\Exception\ApiCallerException
-     * @expectedExceptionMessage Not enough parameters: param, param1
-     */
     public function testShouldThrowNotEnoughParameters()
     {
         $this->expectException(ApiCallerException::class);
@@ -45,14 +38,10 @@ class ApiCallerTest extends TestCase
         $apis = [];
         $apis['test'] = ['name' => 'Test', 'path' => '/path/{param}/{param1}'];
 
-        $caller = new ApiCaller(new StubTransport(), new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller(new StubTransport(), $this->createStub(SerializerInterface::class), $domain, $apis);
         $caller->makeRequest('test', null);
     }
 
-    /**
-     * @expectedException \Released\ApiCallerBundle\Exception\ApiCallerException
-     * @expectedExceptionMessage Param 'some' should be instance of 'Released\ApiCallerBundle\Tests\Service\ApiCallerTest'
-     */
     public function testShouldThrowClassDoesNotMatch()
     {
         $this->expectException(ApiCallerException::class);
@@ -72,7 +61,7 @@ class ApiCallerTest extends TestCase
             ],
         ];
 
-        $caller = new ApiCaller(new StubTransport(), new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller(new StubTransport(), $this->createStub(SerializerInterface::class), $domain, $apis);
         $caller->makeRequest('test', ['some' => ''], null);
     }
 
@@ -101,7 +90,7 @@ class ApiCallerTest extends TestCase
             )
             ->willReturn($transportResponse);
 
-        $caller = new ApiCaller($transport, new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller($transport, $this->createStub(SerializerInterface::class), $domain, $apis);
         $response = $caller->makeRequest('test', [
             'param' => 'value',
             'file' => $fileContent,
@@ -132,7 +121,7 @@ class ApiCallerTest extends TestCase
             ->willReturn($transportResponse);
 
 
-        $caller = new ApiCaller($transport, new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller($transport, $this->createStub(SerializerInterface::class), $domain, $apis);
         $response = $caller->makeRequest('test', new class {
             // Must be getters because of normilizer
             public function getParam(): string { return 'value'; }
@@ -199,7 +188,7 @@ class ApiCallerTest extends TestCase
             )
             ->willReturn($transportResponse);
 
-        $caller = new ApiCaller($transport, new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller($transport, $this->createStub(SerializerInterface::class), $domain, $apis);
         $response = $caller->makeRequest('test', [], null, [
             'Header A' => 3,
             'Header C' => 4,
@@ -243,7 +232,7 @@ class ApiCallerTest extends TestCase
         $callback->expects($this->once())->method('onRequest')
             ->with('http://domain.com/path/value', ['a' => 'b'], 'some content', 200, StubTransport::METHOD_POST);
 
-        $caller = new ApiCaller($transport, new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller($transport, $this->createStub(SerializerInterface::class), $domain, $apis);
         $response = $caller->makeRequest('test', [
             'param' => 'value',
             'a' => 'b',
@@ -252,10 +241,6 @@ class ApiCallerTest extends TestCase
         $this->assertEquals($transportResponse, $response);
     }
 
-    /**
-     * @expectedException \Released\ApiCallerBundle\Exception\ApiResponseException
-     * @expectedExceptionMessage Response status is 500
-     */
     public function testShouldThrowNotSuccessful()
     {
         $this->expectException(ApiResponseException::class);
@@ -273,7 +258,7 @@ class ApiCallerTest extends TestCase
             ->with($domain . "path", StubTransport::METHOD_GET)
             ->willReturn(new TransportResponse("some content", 500));
 
-        $caller = new ApiCaller($transport, new StubSerializer(), $domain, $apis);
+        $caller = new ApiCaller($transport, $this->createStub(SerializerInterface::class), $domain, $apis);
         $caller->makeRequest('test', null);
     }
 

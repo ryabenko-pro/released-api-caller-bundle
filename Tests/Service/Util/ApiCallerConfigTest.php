@@ -4,6 +4,7 @@ namespace Released\ApiCallerBundle\Tests\Unit\Service\Util;
 
 
 use PHPUnit\Framework\TestCase;
+use Released\ApiCallerBundle\Exception\ApiCallerException;
 use Released\ApiCallerBundle\Service\Util\ApiCallerConfig;
 
 class ApiCallerConfigTest extends TestCase
@@ -29,11 +30,11 @@ class ApiCallerConfigTest extends TestCase
     }
 
     /**
-     * @expectedException \Released\ApiCallerBundle\Exception\ApiCallerException
-     * @expectedExceptionMessage Path param 'file' overrides same 'file' param
      */
     public function testShouldThrowOverrideFile()
     {
+        $this->expectException(ApiCallerException::class);
+        $this->expectExceptionMessage("Path param 'file' overrides same 'file' param");
         new ApiCallerConfig("Test", "/test/{file}", [
             'file' => ['type' => 'file'],
         ]);
