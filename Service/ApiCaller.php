@@ -6,12 +6,15 @@ namespace Released\ApiCallerBundle\Service;
 
 use JMS\Serializer\SerializerInterface as JmsSerializerInterface;
 use PHPUnit\Framework\ExpectationFailedException;
+use Released\ApiCallerBundle\Event\RequestEvent;
 use Released\ApiCallerBundle\Exception\ApiCallerException;
 use Released\ApiCallerBundle\Exception\ApiResponseException;
 use Released\ApiCallerBundle\Service\Util\ApiCallerConfig;
 use Released\ApiCallerBundle\Service\Util\ApiCallerListenerInterface;
 use Released\ApiCallerBundle\Transport\TransportInterface;
 use Released\ApiCallerBundle\Transport\TransportResponse;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Normalizer\GetSetMethodNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
@@ -19,6 +22,8 @@ use Symfony\Component\Serializer\Serializer;
 class ApiCaller implements ApiCallerInterface
 {
 
+    /** @var string */
+    private $caseName;
     /** @var ApiCallerConfig[] */
     private $apis;
     /** @var string */
@@ -27,11 +32,21 @@ class ApiCaller implements ApiCallerInterface
     private $transport;
     /** @var JmsSerializerInterface */
     private $serializer;
+    /** @var EventDispatcherInterface */
+    private $eventDispatcher;
 
-    function __construct(TransportInterface $transport, JmsSerializerInterface $serializer, $domain, $apis)
-    {
+    function __construct(
+        string $caseName,
+        TransportInterface $transport,
+        JmsSerializerInterface $serializer,
+        EventDispatcherInterface $eventDispatcher,
+        $domain,
+        $apis
+    ) {
+        $this->caseName = $caseName;
         $this->transport = $transport;
         $this->serializer = $serializer;
+        $this->eventDispatcher = $eventDispatcher;
 
         $this->domain = rtrim($domain, "/");
 
@@ -39,20 +54,22 @@ class ApiCaller implements ApiCallerInterface
             $this->apis[$key] = new ApiCallerConfig(
                 $api['name'],
                 $api['path'],
-                isset($api['params']) ? $api['params'] : [],
-                isset($api['method']) ? $api['method'] : 'GET',
-                isset($api['headers']) ? $api['headers'] : null,
+                $api['params'] ?? [],
+                $api['method'] ?? 'GET',
+                $api['headers'] ?? null,
                 // TODO: space for request class
-                isset($api['response_class']) ? $api['response_class'] : null,
-                isset($api['response_format']) ? $api['response_format'] : null
+                $api['response_class'] ?? null,
+                $api['response_format'] ?? null
             );
         }
     }
 
     /**
      * {@inheritdoc}
+     * @return TransportResponse
+     * @throws ExceptionInterface
      */
-    public function makeRequest($api, $values = [], ApiCallerListenerInterface $listener = null, $headers = null, $domain = null)
+    public function makeRequest($api, $values = [], ApiCallerListenerInterface $listener = null, $headers = null, $domain = null): TransportResponse
     {
         if (is_object($values)) {
             $normalizer = new ObjectNormalizer();
@@ -71,6 +88,16 @@ class ApiCaller implements ApiCallerInterface
         $data = $config->filterParams($values);
         $files = $config->filterFiles($values);
         $headers = $config->mergeHeaders($headers);
+
+        if ($this->eventDispatcher->hasListeners(RequestEvent::class)) {
+            $event = new RequestEvent($this->caseName, $api, $config, $values, $path, $data, $files, $headers);
+            $this->eventDispatcher->dispatch($event);
+
+            $path = $event->getPath();
+            $data = $event->getData();
+            $files = $event->getFiles();
+            $headers = $event->getHeaders();
+        }
 
         $url = ($domain ?? $this->domain) . $path;
         $method = $config->getMethod();
@@ -107,7 +134,7 @@ class ApiCaller implements ApiCallerInterface
      * @return ApiCallerConfig
      * @throws ApiCallerException
      */
-    private function checkApi($api, $values)
+    private function checkApi(string $api, array $values): ApiCallerConfig
     {
         if (!isset($this->apis[$api])) {
             throw new ApiCallerException("Api '{$api}' does not exists");
@@ -145,8 +172,9 @@ class ApiCaller implements ApiCallerInterface
      *
      * @param array $values
      * @return array
+     * @throws ExceptionInterface
      */
-    private function cleanValues($values)
+    private function cleanValues(array $values): array
     {
         $values = $values ?? [];
 

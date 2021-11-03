@@ -7,4 +7,5 @@ services:
         arguments:
           - "@released.api_caller.transport"
           - "@jms_serializer.serializer"
+          - "@event_dispatcher"
           - "%released.api_caller.cases%"

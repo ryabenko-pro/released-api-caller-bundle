@@ -17,8 +17,8 @@ class Configuration implements ConfigurationInterface
      */
     public function getConfigTreeBuilder()
     {
-        $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('released_api_caller');
+        $treeBuilder = new TreeBuilder('released_api_caller');
+        $rootNode = $treeBuilder->getRootNode();
 
         $rootNode->children()
             ->arrayNode("cases")->requiresAtLeastOneElement()->prototype('array')
@@ -27,7 +27,7 @@ class Configuration implements ConfigurationInterface
                 ->arrayNode("endpoints")->requiresAtLeastOneElement()->prototype('array')
                 ->children()
                     ->scalarNode("name")->isRequired()->end()
-                    ->scalarNode("method")->defaultValue("GET")->isRequired()->end()
+                    ->scalarNode("method")->defaultValue("GET")->end()
                     ->scalarNode("path")->isRequired()->end()
                     ->scalarNode("request_class")->end()
                     ->scalarNode("response_class")->end()

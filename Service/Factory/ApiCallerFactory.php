@@ -9,6 +9,7 @@ use Released\ApiCallerBundle\Exception\ApiCallerException;
 use Released\ApiCallerBundle\Transport\TransportInterface;
 use Released\ApiCallerBundle\Service\ApiCaller;
 use Released\ApiCallerBundle\Service\ApiCallerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class ApiCallerFactory
 {
@@ -25,12 +26,16 @@ class ApiCallerFactory
     /** @var SerializerInterface */
     protected $serializer;
 
-    public function __construct(TransportInterface $transport, SerializerInterface $serializer, array $cases)
+    /** @var EventDispatcherInterface */
+    private $eventDispatcher;
+
+    public function __construct(TransportInterface $transport, SerializerInterface $serializer, EventDispatcherInterface $eventDispatcher, array $cases)
     {
         $this->transport = $transport;
         $this->cases = $cases;
 
         $this->serializer = $serializer;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     /**
@@ -38,14 +43,14 @@ class ApiCallerFactory
      * @param TransportInterface|null $transport
      * @return ApiCallerInterface
      */
-    public function createApiCaller($case, TransportInterface $transport = null)
+    public function createApiCaller(string $case, TransportInterface $transport = null)
     {
         $this->checkCase($case);
 
         if (!isset($this->instances[$case])) {
             $caseConfig = $this->cases[$case];
 
-            $instance = new ApiCaller($transport ?? $this->transport, $this->serializer, $caseConfig['domain'], $caseConfig['endpoints']);
+            $instance = new ApiCaller($case, $transport ?? $this->transport, $this->serializer, $this->eventDispatcher, $caseConfig['domain'], $caseConfig['endpoints']);
             $this->instances[$case] = $instance;
         }
 
@@ -53,14 +58,13 @@ class ApiCallerFactory
     }
 
     /**
-     * @param $case
+     * @param string $case
      * @throws ApiCallerException
      */
-    protected function checkCase($case)
+    protected function checkCase(string $case)
     {
         if (!isset($this->cases[$case])) {
             throw new ApiCallerException("ApiCaller case '{$case}' is not defined.");
         }
     }
-
 }
