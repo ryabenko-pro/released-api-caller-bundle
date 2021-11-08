@@ -72,12 +72,8 @@ class ApiCaller implements ApiCallerInterface
     public function makeRequest($api, $values = [], ApiCallerListenerInterface $listener = null, $headers = null, $domain = null): TransportResponse
     {
         if (is_object($values)) {
-            $normalizer = new ObjectNormalizer();
-
-            $serializer = new Serializer(array($normalizer));
-            $normalizer->setSerializer($serializer);
-
-            $values = $normalizer->normalize($values);
+            // Easiest way to convert object into array respecting serialization rules
+            $values = json_decode($this->serializer->serialize($values, "json"), true);
         }
 
         $config = $this->checkApi($api, $values);
