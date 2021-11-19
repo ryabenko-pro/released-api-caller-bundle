@@ -108,24 +108,27 @@ class ApiCallerConfig
     }
 
     /**
-     * @param $values
-     * @param $params
+     * @param string|array $api
+     * @param array $values
+     * @param array $params
      * @return string
      */
-    public function buildPath($values, $params)
+    public function buildPath($api, array $values, array $params)
     {
+        $apiPathValues = is_array($api) ? $api[1] : [];
+
         $replace = [];
         foreach ($this->pathParams as $key => $value) {
-            if (isset($values[$key])) {
+            if (isset($apiPathValues[$key])) {
+                $replace[sprintf('{%s}', $key)] = urlencode($apiPathValues[$key]);
+            } else if (isset($values[$key])) {
                 $replace[sprintf('{%s}', $key)] = urlencode($values[$key]);
             } else if (isset($params[$key]) && isset($params[$key]['value'])) {
                 $replace[sprintf('{%s}', $key)] = urlencode($params[$key]['value']);
             }
         }
 
-        $path = strtr($this->path, $replace);
-
-        return $path;
+        return strtr($this->path, $replace);
     }
 
     /**

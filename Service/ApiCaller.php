@@ -66,7 +66,6 @@ class ApiCaller implements ApiCallerInterface
 
     /**
      * {@inheritdoc}
-     * @return TransportResponse
      * @throws ExceptionInterface
      */
     public function makeRequest($api, $values = [], ApiCallerListenerInterface $listener = null, $headers = null, $domain = null): TransportResponse
@@ -76,11 +75,15 @@ class ApiCaller implements ApiCallerInterface
             $values = json_decode($this->serializer->serialize($values, "json"), true);
         }
 
+        if (null === $values) {
+            $values = [];
+        }
+
         $config = $this->checkApi($api, $values);
 
         $values = $this->cleanValues($values);
 
-        $path = $config->buildPath($values, $config->getParams());
+        $path = $config->buildPath($api, $values, $config->getParams());
         $data = $config->filterParams($values);
         $files = $config->filterFiles($values);
         $headers = $config->mergeHeaders($headers);
@@ -110,7 +113,7 @@ class ApiCaller implements ApiCallerInterface
         }
 
         if (!$result->isOk()) {
-            throw new ApiResponseException($result, "Response status is " . $result->getStatus());
+            throw new ApiResponseException($result, "Response status is " . $result->getStatus() . "; " . $result->getContent());
         }
 
         if (!is_null($config->getResponseClass())) {
@@ -125,18 +128,26 @@ class ApiCaller implements ApiCallerInterface
     }
 
     /**
-     * @param string $api
+     * @param string|array $api
      * @param array $values
      * @return ApiCallerConfig
      * @throws ApiCallerException
      */
-    private function checkApi(string $api, array $values): ApiCallerConfig
+    private function checkApi($api, array $values): ApiCallerConfig
     {
-        if (!isset($this->apis[$api])) {
-            throw new ApiCallerException("Api '{$api}' does not exists");
+        if (is_array($api)) {
+            $apiName = $api[0];
+            $pathParams = $api[1];
+        } else {
+            $apiName = $api;
+            $pathParams = [];
         }
 
-        $config = $this->apis[$api];
+        if (!isset($this->apis[$apiName])) {
+            throw new ApiCallerException("Api '{$apiName}' does not exists");
+        }
+
+        $config = $this->apis[$apiName];
 
         $notExistingParams = [];
         $params = $config->getParams();
@@ -151,7 +162,7 @@ class ApiCaller implements ApiCallerInterface
         }
 
         foreach ($config->getPathParams() as $key => $param) {
-            if (!isset($values[$key]) && !isset($params[$key])) {
+            if (!isset($values[$key]) && !isset($params[$key]) && !isset($pathParams[$key])) {
                 $notExistingParams[] = $key;
             }
         }

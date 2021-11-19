@@ -25,6 +25,7 @@ class Transport implements TransportInterface
     {
         switch ($method) {
             case self::METHOD_PUT:
+            case self::METHOD_PATCH:
             case self::METHOD_POST:
 
                 // TODO: use another HTTP client
@@ -69,6 +70,14 @@ class Transport implements TransportInterface
 
                 if (self::METHOD_POST === $method) {
                     $response = $this->client->post($url, [
+                        RequestOptions::JSON => $data,
+                        'headers' => $headers,
+                        'exceptions' => false,
+                    ]);
+                }
+
+                if (self::METHOD_PATCH === $method) {
+                    $response = $this->client->patch($url, [
                         RequestOptions::JSON => $data,
                         'headers' => $headers,
                         'exceptions' => false,

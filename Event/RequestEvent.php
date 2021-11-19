@@ -8,7 +8,7 @@ class RequestEvent
 {
     /** @var string */
     private $callerCaseName;
-    /** @var string */
+    /** @var string|array */
     protected $api;
     /** @var ApiCallerConfig */
     protected $config;
@@ -23,7 +23,7 @@ class RequestEvent
     /** @var array|null */
     protected $headers;
 
-    public function __construct(string $callerCaseName, string $apiName, ApiCallerConfig $config, ?array $values, string $path, ?array $data, ?array $files, ?array $headers)
+    public function __construct(string $callerCaseName, $apiName, ApiCallerConfig $config, ?array $values, string $path, ?array $data, ?array $files, ?array $headers)
     {
         $this->callerCaseName = $callerCaseName;
         $this->api = $apiName;
@@ -40,7 +40,8 @@ class RequestEvent
         return $this->callerCaseName;
     }
 
-    public function getApi(): string
+    /** @return string|array */
+    public function getApi()
     {
         return $this->api;
     }

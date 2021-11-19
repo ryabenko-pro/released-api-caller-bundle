@@ -12,7 +12,7 @@ interface ApiCallerInterface
 {
 
     /**
-     * @param string $api Name of API to call
+     * @param string|array $api Name of API to call
      * @param array $values
      * @param ApiCallerListenerInterface $listener
      * @param array $headers
