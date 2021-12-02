@@ -44,6 +44,13 @@ class Transport implements TransportInterface
                                 'contents' => new Stream($value),
                                 'filename' => $filename,
                             ];
+                        } else if ($value instanceof \SplFileInfo) {
+                            $multipart[] = [
+                                'name' => $key,
+                                // TODO: close the file after the request
+                                'contents' => $value,
+                                'filename' => $value->getFilename(),
+                            ];
                         } else if (is_file($value) && is_readable($value)) {
                             $multipart[] = [
                                 'name' => $key,
@@ -69,11 +76,19 @@ class Transport implements TransportInterface
                 }
 
                 if (self::METHOD_POST === $method) {
-                    $response = $this->client->post($url, [
-                        RequestOptions::JSON => $data,
-                        'headers' => $headers,
-                        'exceptions' => false,
-                    ]);
+                    if ($multipart) {
+                        $response = $this->client->post($url, [
+                            RequestOptions::MULTIPART => $multipart,
+                            'headers' => $headers,
+                            'exceptions' => false,
+                        ]);
+                    } else {
+                        $response = $this->client->post($url, [
+                            RequestOptions::JSON => $data,
+                            'headers' => $headers,
+                            'exceptions' => false,
+                        ]);
+                    }
                 }
 
                 if (self::METHOD_PATCH === $method) {
@@ -102,8 +117,13 @@ class Transport implements TransportInterface
                 break;
         }
 
-        $content = $response->getBody()->getContents();
-        $content = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+        if ($response->hasHeader("Content-Disposition") && str_starts_with($response->getHeader("Content-Disposition")[0], "attachment")) {
+            $content = $response->getBody();
+        } else {
+            $content = $response->getBody()->getContents();
+            $content = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+        }
+
 
         if ($response->getHeader("Content-Type") == 'application/json') {
             $content = json_decode($content, true);

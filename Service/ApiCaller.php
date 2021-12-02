@@ -186,6 +186,10 @@ class ApiCaller implements ApiCallerInterface
         $values = $values ?? [];
 
         foreach ($values as $key => $value) {
+            if ($value instanceof \SplFileInfo) {
+                continue;
+            }
+
             if (is_object($value)) {
                 $normalizer = new GetSetMethodNormalizer();
 
