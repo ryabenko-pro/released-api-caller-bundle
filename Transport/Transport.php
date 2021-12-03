@@ -76,7 +76,7 @@ class Transport implements TransportInterface
                 }
 
                 if (self::METHOD_POST === $method) {
-                    if (is_array($files) && count($files) > 1) {
+                    if (is_array($files) && count($files) > 0) {
                         $response = $this->client->post($url, [
                             RequestOptions::MULTIPART => $multipart,
                             'headers' => $headers,
